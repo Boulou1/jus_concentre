@@ -604,10 +604,21 @@
         }
         
         function toggleInputs(prefix, type) {
-            const label = document.getElementById(`${prefix}-value-label`) || 
-                         document.getElementById(`${prefix.replace('-', '-value-')}-label`);
-            const input = document.getElementById(`${prefix}-value`) || 
-                         document.getElementById(`${prefix.replace('-', '-value-')}`);
+            let label, input;
+            
+            if (prefix === 'juice') {
+                label = document.getElementById('juice-value-label');
+                input = document.getElementById('juice-value');
+            } else if (prefix === 'concentrate-1') {
+                label = document.getElementById('concentrate-value-1-label');
+                input = document.getElementById('concentrate-value-1');
+            } else if (prefix === 'concentrate-2') {
+                label = document.getElementById('concentrate-value-2-label');
+                input = document.getElementById('concentrate-value-2');
+            } else if (prefix === 'juice-2') {
+                label = document.getElementById('juice-value-2-label');
+                input = document.getElementById('juice-value-2');
+            }
             
             if (label && input) {
                 switch(type) {
@@ -634,82 +645,99 @@
         function displayResults(data, isJusToConcentre) {
             const resultContent = document.getElementById('result-content');
             
-            // Cartes de résultats principaux
-            const resultType = isJusToConcentre ? 'concentré nécessaire' : 'jus produit';
-            const results = data.results;
-            
+            // Tableau de résultats comme dans la photo
             resultContent.innerHTML = `
-                <div class="result-grid">
-                    <div class="result-card">
-                        <h4>🍯 Hectolitres</h4>
-                        <div class="result-value">${results.hectolitres.toFixed(1)}</div>
-                        <div class="result-unit">hL</div>
-                    </div>
-                    <div class="result-card">
-                        <h4>⚖️ Kilogrammes</h4>
-                        <div class="result-value">${results.kg.toFixed(0)}</div>
-                        <div class="result-unit">kg</div>
-                    </div>
-                    <div class="result-card">
-                        <h4>🚚 Tonnes</h4>
-                        <div class="result-value">${results.tonnes.toFixed(3)}</div>
-                        <div class="result-unit">t</div>
-                    </div>
-                    <div class="result-card">
-                        <h4>📊 Taux</h4>
-                        <div class="result-value">${data.concentrationRate.toFixed(4)}</div>
-                        <div class="result-unit">concentration</div>
-                    </div>
+                <div style="overflow-x: auto; margin-bottom: 30px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 16px; margin: 20px 0;">
+                        <thead>
+                            <tr style="background: #667eea; color: white;">
+                                <th style="border: 1px solid #ddd; padding: 12px; text-align: left;">Paramètre</th>
+                                <th style="border: 1px solid #ddd; padding: 12px; text-align: center;">Concentré</th>
+                                <th style="border: 1px solid #ddd; padding: 12px; text-align: center;">Pur Jus</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="background: #f8f9fa;">
+                                <td style="border: 1px solid #ddd; padding: 12px; font-weight: bold;">Brix</td>
+                                <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">${data.propsConcentre.brix.toFixed(2)}</td>
+                                <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">${data.propsJus.brix.toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 12px; font-weight: bold;">Degré</td>
+                                <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">${data.propsConcentre.degree.toFixed(3)}</td>
+                                <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">${data.propsJus.degree.toFixed(3)}</td>
+                            </tr>
+                            <tr style="background: #f8f9fa;">
+                                <td style="border: 1px solid #ddd; padding: 12px; font-weight: bold;">°Baumé</td>
+                                <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">${data.propsConcentre.degreeBaume.toFixed(3)}</td>
+                                <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">${data.propsJus.degreeBaume.toFixed(3)}</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 12px; font-weight: bold;">Densité</td>
+                                <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">${data.propsConcentre.density.toFixed(4)}</td>
+                                <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">${data.propsJus.density.toFixed(4)}</td>
+                            </tr>
+                            <tr style="background: #f8f9fa;">
+                                <td style="border: 1px solid #ddd; padding: 12px; font-weight: bold;">Coef.</td>
+                                <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">${data.concentrationRate.toFixed(4)}</td>
+                                <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">${data.concentrationRate.toFixed(4)}</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 12px; font-weight: bold;">Masse</td>
+                                <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">
+                                    ${isJusToConcentre ? 
+                                        `${data.results.tonnes.toFixed(3)} t /<br>${(data.results.tonnes * 10).toFixed(2)} qtx /<br>${data.results.kg.toFixed(0)} kg` :
+                                        `Entrée`
+                                    }
+                                </td>
+                                <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">
+                                    ${isJusToConcentre ? 
+                                        `Entrée` :
+                                        `${data.results.tonnes.toFixed(3)} t /<br>${(data.results.tonnes * 10).toFixed(2)} qtx /<br>${data.results.kg.toFixed(0)} kg`
+                                    }
+                                </td>
+                            </tr>
+                            <tr style="background: #f8f9fa;">
+                                <td style="border: 1px solid #ddd; padding: 12px; font-weight: bold;">Volume (hL)</td>
+                                <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">
+                                    ${isJusToConcentre ? 
+                                        `${data.results.hectolitres.toFixed(2)}` :
+                                        `Entrée`
+                                    }
+                                </td>
+                                <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">
+                                    ${isJusToConcentre ? 
+                                        `Entrée` :
+                                        `${data.results.hectolitres.toFixed(2)}`
+                                    }
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 12px; font-weight: bold;">Volume (L)</td>
+                                <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">
+                                    ${isJusToConcentre ? 
+                                        `${data.results.litres.toFixed(0)}` :
+                                        `Entrée`
+                                    }
+                                </td>
+                                <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">
+                                    ${isJusToConcentre ? 
+                                        `Entrée` :
+                                        `${data.results.litres.toFixed(0)}`
+                                    }
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
                 
-                <div class="properties-grid">
-                    <div class="property-section">
-                        <h4>🥤 Propriétés du jus</h4>
-                        <div class="property-item">
-                            <span>Brix</span>
-                            <span>${data.propsJus.brix.toFixed(2)}°Brix</span>
-                        </div>
-                        <div class="property-item">
-                            <span>Densité</span>
-                            <span>${data.propsJus.density.toFixed(4)}</span>
-                        </div>
-                        <div class="property-item">
-                            <span>Degré Baumé</span>
-                            <span>${data.propsJus.degreeBaume.toFixed(3)}°</span>
-                        </div>
-                        <div class="property-item">
-                            <span>Degré</span>
-                            <span>${data.propsJus.degree.toFixed(3)}°</span>
-                        </div>
-                        <div class="property-item">
-                            <span>Masse volumique</span>
-                            <span>${data.propsJus.masseVolumique.toFixed(4)} kg/L</span>
-                        </div>
-                    </div>
-                    
-                    <div class="property-section">
-                        <h4>🧪 Propriétés du concentré</h4>
-                        <div class="property-item">
-                            <span>Brix</span>
-                            <span>${data.propsConcentre.brix.toFixed(2)}°Brix</span>
-                        </div>
-                        <div class="property-item">
-                            <span>Densité</span>
-                            <span>${data.propsConcentre.density.toFixed(4)}</span>
-                        </div>
-                        <div class="property-item">
-                            <span>Degré Baumé</span>
-                            <span>${data.propsConcentre.degreeBaume.toFixed(3)}°</span>
-                        </div>
-                        <div class="property-item">
-                            <span>Degré</span>
-                            <span>${data.propsConcentre.degree.toFixed(3)}°</span>
-                        </div>
-                        <div class="property-item">
-                            <span>Masse volumique</span>
-                            <span>${data.propsConcentre.masseVolumique.toFixed(4)} kg/L</span>
-                        </div>
-                    </div>
+                <div style="background: #e8f5e8; padding: 20px; border-radius: 10px; border-left: 5px solid #28a745; margin-top: 20px;">
+                    <h4 style="color: #28a745; margin-bottom: 10px;">📋 Résumé</h4>
+                    <p style="margin: 0; font-size: 16px;">
+                        <strong>Taux de concentration :</strong> ${data.concentrationRate.toFixed(4)}<br>
+                        <strong>${isJusToConcentre ? 'Concentré nécessaire' : 'Jus produit'} :</strong> 
+                        ${data.results.tonnes.toFixed(3)} tonnes (${data.results.hectolitres.toFixed(2)} hL)
+                    </p>
                 </div>
             `;
             
