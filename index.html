@@ -515,7 +515,7 @@
             }
         }
         
-        function displayResults(data, isJusToConcentre) {
+        function displayResults(data, isJusToConcentre, inputData) {
             const resultContent = document.getElementById('result-content');
             
             resultContent.innerHTML = `
@@ -559,12 +559,12 @@
                                 <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">
                                     ${isJusToConcentre ? 
                                         `${data.results.tonnes.toFixed(3)} t /<br>${(data.results.tonnes * 10).toFixed(2)} qtx /<br>${data.results.kg.toFixed(0)} kg` :
-                                        `Entrée`
+                                        `${inputData.tonnes.toFixed(3)} t /<br>${(inputData.tonnes * 10).toFixed(2)} qtx /<br>${inputData.kg.toFixed(0)} kg`
                                     }
                                 </td>
                                 <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">
                                     ${isJusToConcentre ? 
-                                        `Entrée` :
+                                        `${inputData.tonnes.toFixed(3)} t /<br>${(inputData.tonnes * 10).toFixed(2)} qtx /<br>${inputData.kg.toFixed(0)} kg` :
                                         `${data.results.tonnes.toFixed(3)} t /<br>${(data.results.tonnes * 10).toFixed(2)} qtx /<br>${data.results.kg.toFixed(0)} kg`
                                     }
                                 </td>
@@ -574,12 +574,12 @@
                                 <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">
                                     ${isJusToConcentre ? 
                                         `${data.results.hectolitres.toFixed(2)}` :
-                                        `Entrée`
+                                        `${inputData.hectolitres.toFixed(2)}`
                                     }
                                 </td>
                                 <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">
                                     ${isJusToConcentre ? 
-                                        `Entrée` :
+                                        `${inputData.hectolitres.toFixed(2)}` :
                                         `${data.results.hectolitres.toFixed(2)}`
                                     }
                                 </td>
@@ -589,12 +589,12 @@
                                 <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">
                                     ${isJusToConcentre ? 
                                         `${data.results.litres.toFixed(0)}` :
-                                        `Entrée`
+                                        `${inputData.litres.toFixed(0)}`
                                     }
                                 </td>
                                 <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">
                                     ${isJusToConcentre ? 
-                                        `Entrée` :
+                                        `${inputData.litres.toFixed(0)}` :
                                         `${data.results.litres.toFixed(0)}`
                                     }
                                 </td>
@@ -641,56 +641,20 @@
                     throw new Error('Le Brix du concentré doit être supérieur au Brix du jus');
                 }
                 
-                const propsJus = calculateProperties(juiceBrix);
-                const propsConcentre = calculateProperties(concentrateBrix);
-                const concentrationRate = concentrateBrix / juiceBrix;
-                
-                const quinteauxJus = convertToQuintaux(quantity, unit, propsJus.masseVolumique);
-                const quinteauxConcentre = quinteauxJus / concentrationRate;
-                
-                const results = {
-                    litres: convertFromQuintaux(quinteauxConcentre, 'litres', propsConcentre.masseVolumique),
-                    hectolitres: convertFromQuintaux(quinteauxConcentre, 'hectolitres', propsConcentre.masseVolumique),
-                    kg: convertFromQuintaux(quinteauxConcentre, 'kg', propsConcentre.masseVolumique),
-                    tonnes: convertFromQuintaux(quinteauxConcentre, 'tonnes', propsConcentre.masseVolumique)
-                };
-                
-                displayResults({
-                    results,
-                    concentrationRate,
-                    propsJus,
-                    propsConcentre
-                }, true);
-                
-            } catch(error) {
-                showError(error.message);
-            }
-        });
-        
-        document.getElementById('form-concentre-jus').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            try {
-                const quantity = parseFloat(document.getElementById('concentrate-quantity').value);
-                const unit = document.getElementById('concentrate-unit').value;
-                const concentrateType = document.getElementById('concentrate-type-2').value;
-                const concentrateValue = parseFloat(document.getElementById('concentrate-value-2').value);
-                const juiceType = document.getElementById('juice-type-2').value;
-                const juiceValue = parseFloat(document.getElementById('juice-value-2').value);
-                
-                const concentrateBrix = getBrixFromInput(concentrateValue, concentrateType);
-                const juiceBrix = getBrixFromInput(juiceValue, juiceType);
-                
-                if (concentrateBrix <= juiceBrix) {
-                    throw new Error('Le Brix du concentré doit être supérieur au Brix du jus');
-                }
-                
                 const propsConcentre = calculateProperties(concentrateBrix);
                 const propsJus = calculateProperties(juiceBrix);
                 const concentrationRate = concentrateBrix / juiceBrix;
                 
                 const quinteauxConcentre = convertToQuintaux(quantity, unit, propsConcentre.masseVolumique);
                 const quinteauxJus = quinteauxConcentre * concentrationRate;
+                
+                // Calculer les valeurs d'entrée dans toutes les unités
+                const inputData = {
+                    litres: convertFromQuintaux(quinteauxConcentre, 'litres', propsConcentre.masseVolumique),
+                    hectolitres: convertFromQuintaux(quinteauxConcentre, 'hectolitres', propsConcentre.masseVolumique),
+                    kg: convertFromQuintaux(quinteauxConcentre, 'kg', propsConcentre.masseVolumique),
+                    tonnes: convertFromQuintaux(quinteauxConcentre, 'tonnes', propsConcentre.masseVolumique)
+                };
                 
                 const results = {
                     litres: convertFromQuintaux(quinteauxJus, 'litres', propsJus.masseVolumique),
@@ -704,7 +668,7 @@
                     concentrationRate,
                     propsJus,
                     propsConcentre
-                }, false);
+                }, false, inputData);
                 
             } catch(error) {
                 showError(error.message);
