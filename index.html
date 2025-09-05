@@ -218,6 +218,16 @@
             font-weight: 600;
         }
         
+        .price-section {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            margin-top: 20px;
+        }
+        
+        .price-section h3 {
+            color: #856404;
+        }
+        
         @media (max-width: 768px) {
             .form-grid {
                 grid-template-columns: 1fr;
@@ -241,7 +251,7 @@
     <div class="container">
         <div class="header">
             <h1>Calculateur Jus ↔ Concentré</h1>
-            <p>Calculs bidirectionnels avec vos formules exactes</p>
+            <p>Calculs bidirectionnels avec vos formules exactes + Pricing</p>
         </div>
         
         <div class="tabs">
@@ -310,6 +320,35 @@
                         </div>
                     </div>
                     
+                    <!-- Section Prix -->
+                    <div class="form-section price-section">
+                        <h3>💰 Prix de référence (optionnel)</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="price-value-1">Prix de référence</label>
+                                <input type="number" id="price-value-1" step="0.01" placeholder="Ex: 150">
+                            </div>
+                            <div class="form-group">
+                                <label for="price-unit-1">Unité de prix</label>
+                                <select id="price-unit-1">
+                                    <option value="hl">€/hectolitre</option>
+                                    <option value="kl">€/kilolitre</option>
+                                    <option value="l">€/litre</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="price-product-1">Produit de référence</label>
+                                <select id="price-product-1">
+                                    <option value="jus">Jus (entrée)</option>
+                                    <option value="concentre">Concentré (sortie)</option>
+                                </select>
+                            </div>
+                            <div class="form-group"></div>
+                        </div>
+                    </div>
+                    
                     <button type="submit" class="btn">Calculer le concentré nécessaire</button>
                 </form>
             </div>
@@ -367,6 +406,35 @@
                                     <input type="number" id="juice-value-2" step="0.01" value="11" required>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Section Prix -->
+                    <div class="form-section price-section">
+                        <h3>💰 Prix de référence (optionnel)</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="price-value-2">Prix de référence</label>
+                                <input type="number" id="price-value-2" step="0.01" placeholder="Ex: 150">
+                            </div>
+                            <div class="form-group">
+                                <label for="price-unit-2">Unité de prix</label>
+                                <select id="price-unit-2">
+                                    <option value="hl">€/hectolitre</option>
+                                    <option value="kl">€/kilolitre</option>
+                                    <option value="l">€/litre</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="price-product-2">Produit de référence</label>
+                                <select id="price-product-2">
+                                    <option value="concentre">Concentré (entrée)</option>
+                                    <option value="jus">Jus (sortie)</option>
+                                </select>
+                            </div>
+                            <div class="form-group"></div>
                         </div>
                     </div>
                     
@@ -469,6 +537,52 @@
             }
         }
         
+        // === CALCULS DE PRIX ===
+        function calculatePricing(priceValue, priceUnit, priceProduct, isJusToConcentre, data, inputData) {
+            if (!priceValue) return null;
+            
+            // Déterminer les propriétés du produit de référence
+            let refProps, refBrix;
+            if ((isJusToConcentre && priceProduct === 'jus') || (!isJusToConcentre && priceProduct === 'jus')) {
+                refProps = data.propsJus;
+                refBrix = data.propsJus.brix;
+            } else {
+                refProps = data.propsConcentre;
+                refBrix = data.propsConcentre.brix;
+            }
+            
+            // Convertir le prix en €/hectolitre
+            let pricePerHl = priceValue;
+            if (priceUnit === 'kl') pricePerHl = priceValue / 10;
+            if (priceUnit === 'l') pricePerHl = priceValue * 100;
+            
+            // Convertir en prix par tonne : Prix/hL ÷ masse volumique = Prix/tonne
+            const pricePerTonne = pricePerHl / refProps.masseVolumique;
+            
+            // Calculer les prix pour jus et concentré selon le ratio Brix
+            const jusPricePerTonne = pricePerTonne * (data.propsJus.brix / refBrix);
+            const concentrePricePerTonne = pricePerTonne * (data.propsConcentre.brix / refBrix);
+            
+            // Calculer les coûts totaux
+            const jusTotalCost = isJusToConcentre ? 
+                inputData.tonnes * jusPricePerTonne : 
+                data.results.tonnes * jusPricePerTonne;
+                
+            const concentreTotalCost = isJusToConcentre ? 
+                data.results.tonnes * concentrePricePerTonne : 
+                inputData.tonnes * concentrePricePerTonne;
+            
+            return {
+                pricePerTonne: pricePerTonne,
+                jusPricePerTonne: jusPricePerTonne,
+                concentrePricePerTonne: concentrePricePerTonne,
+                jusTotalCost: jusTotalCost,
+                concentreTotalCost: concentreTotalCost,
+                refProduct: priceProduct,
+                refBrix: refBrix
+            };
+        }
+        
         // === INTERFACE ===
         function switchTab(index) {
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
@@ -515,11 +629,56 @@
             }
         }
         
-        function displayResults(data, isJusToConcentre, inputData) {
+        function displayResults(data, isJusToConcentre, inputData, pricing = null) {
             const resultContent = document.getElementById('result-content');
             
             const concentreHeader = isJusToConcentre ? 'Concentré (Sortie)' : 'Concentré (Entrée)';
             const jusHeader = isJusToConcentre ? 'Pur Jus (Entrée)' : 'Pur Jus (Sortie)';
+            
+            let pricingSection = '';
+            if (pricing) {
+                // Vérifications de sécurité pour éviter les erreurs
+                const jusPricePerTonne = pricing.jusPricePerTonne || 0;
+                const concentrePricePerTonne = pricing.concentrePricePerTonne || 0;
+                const jusTotalCost = pricing.jusTotalCost || 0;
+                const concentreTotalCost = pricing.concentreTotalCost || 0;
+                const pricePerQuintal = pricing.pricePerQuintal || 0;
+                const pricePerTonne = pricing.pricePerTonne || 0;
+                const refBrix = pricing.refBrix || 0;
+                
+                pricingSection = `
+                    <div style="margin-top: 30px; background: #fff3cd; padding: 20px; border-radius: 10px; border-left: 5px solid #ffc107;">
+                        <h4 style="color: #856404; margin-bottom: 15px;">💰 Analyse des coûts</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+                            <div>
+                                <strong>Prix par quintal :</strong><br>
+                                • Jus : ${(jusPricePerTonne / 10).toFixed(2)} €/qtx<br>
+                                • Concentré : ${(concentrePricePerTonne / 10).toFixed(2)} €/qtx
+                            </div>
+                            <div>
+                                <strong>Prix par tonne :</strong><br>
+                                • Jus : ${jusPricePerTonne.toFixed(2)} €/t<br>
+                                • Concentré : ${concentrePricePerTonne.toFixed(2)} €/t
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+                            <div>
+                                <strong>Coût total :</strong><br>
+                                • ${isJusToConcentre ? 'Jus (entrée)' : 'Jus (sortie)'} : ${jusTotalCost.toFixed(2)} €<br>
+                                • ${isJusToConcentre ? 'Concentré (sortie)' : 'Concentré (entrée)'} : ${concentreTotalCost.toFixed(2)} €
+                            </div>
+                            <div>
+                                <strong>Détail calcul :</strong><br>
+                                Prix réf.: ${pricePerQuintal.toFixed(2)} €/qtx<br>
+                                Soit: ${pricePerTonne.toFixed(2)} €/t
+                            </div>
+                        </div>
+                        <div style="font-size: 14px; color: #856404;">
+                            <em>Prix de référence : ${pricing.refProduct === 'jus' ? 'Jus' : 'Concentré'} à ${refBrix.toFixed(1)}°Brix</em>
+                        </div>
+                    </div>
+                `;
+            }
             
             resultContent.innerHTML = `
                 <div style="overflow-x: auto; margin-bottom: 30px;">
@@ -558,6 +717,11 @@
                                 <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">${data.concentrationRate.toFixed(4)}</td>
                             </tr>
                             <tr>
+                                <td style="border: 1px solid #ddd; padding: 12px; font-weight: bold;">Masse volumique</td>
+                                <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">${data.propsConcentre.masseVolumique.toFixed(4)}</td>
+                                <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">${data.propsJus.masseVolumique.toFixed(4)}</td>
+                            </tr>
+                            <tr style="background: #f8f9fa;">
                                 <td style="border: 1px solid #ddd; padding: 12px; font-weight: bold;">Masse</td>
                                 <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">
                                     ${isJusToConcentre ? 
@@ -572,7 +736,7 @@
                                     }
                                 </td>
                             </tr>
-                            <tr style="background: #f8f9fa;">
+                            <tr>
                                 <td style="border: 1px solid #ddd; padding: 12px; font-weight: bold;">Volume (hL)</td>
                                 <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">
                                     ${isJusToConcentre ? 
@@ -587,7 +751,7 @@
                                     }
                                 </td>
                             </tr>
-                            <tr>
+                            <tr style="background: #f8f9fa;">
                                 <td style="border: 1px solid #ddd; padding: 12px; font-weight: bold;">Volume (L)</td>
                                 <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">
                                     ${isJusToConcentre ? 
@@ -615,6 +779,8 @@
                         <strong>À partir de :</strong> ${inputData.tonnes.toFixed(3)} tonnes (${inputData.hectolitres.toFixed(2)} hL)
                     </p>
                 </div>
+                
+                ${pricingSection}
             `;
             
             document.getElementById('results').classList.add('show');
@@ -637,6 +803,31 @@
                 const juiceValue = parseFloat(document.getElementById('juice-value').value);
                 const concentrateType = document.getElementById('concentrate-type-1').value;
                 const concentrateValue = parseFloat(document.getElementById('concentrate-value-1').value);
+                
+                // Récupérer les données de prix de manière sécurisée
+                let priceValue = null;
+                let priceUnit = 'hl';
+                let priceProduct = 'jus';
+                
+                try {
+                    const priceValueInput = document.getElementById('price-value-1');
+                    if (priceValueInput && priceValueInput.value && !isNaN(parseFloat(priceValueInput.value))) {
+                        priceValue = parseFloat(priceValueInput.value);
+                    }
+                    
+                    const priceUnitSelect = document.getElementById('price-unit-1');
+                    if (priceUnitSelect && priceUnitSelect.value) {
+                        priceUnit = priceUnitSelect.value;
+                    }
+                    
+                    const priceProductSelect = document.getElementById('price-product-1');
+                    if (priceProductSelect && priceProductSelect.value) {
+                        priceProduct = priceProductSelect.value;
+                    }
+                } catch (priceError) {
+                    console.log('Info: Pas de prix saisi');
+                    priceValue = null;
+                }
                 
                 const juiceBrix = getBrixFromInput(juiceValue, juiceType);
                 const concentrateBrix = getBrixFromInput(concentrateValue, concentrateType);
@@ -666,12 +857,17 @@
                     tonnes: convertFromQuintaux(quinteauxConcentre, 'tonnes', propsConcentre.masseVolumique)
                 };
                 
-                displayResults({
+                const dataForDisplay = {
                     results,
                     concentrationRate,
                     propsJus,
                     propsConcentre
-                }, true, inputData);
+                };
+                
+                // Calculer les prix si fournis
+                const pricing = priceValue ? calculatePricing(priceValue, priceUnit, priceProduct, true, dataForDisplay, inputData) : null;
+                
+                displayResults(dataForDisplay, true, inputData, pricing);
                 
             } catch(error) {
                 showError(error.message);
@@ -688,6 +884,31 @@
                 const concentrateValue = parseFloat(document.getElementById('concentrate-value-2').value);
                 const juiceType = document.getElementById('juice-type-2').value;
                 const juiceValue = parseFloat(document.getElementById('juice-value-2').value);
+                
+                // Récupérer les données de prix de manière sécurisée
+                let priceValue = null;
+                let priceUnit = 'hl';
+                let priceProduct = 'concentre';
+                
+                try {
+                    const priceValueInput = document.getElementById('price-value-2');
+                    if (priceValueInput && priceValueInput.value && !isNaN(parseFloat(priceValueInput.value))) {
+                        priceValue = parseFloat(priceValueInput.value);
+                    }
+                    
+                    const priceUnitSelect = document.getElementById('price-unit-2');
+                    if (priceUnitSelect && priceUnitSelect.value) {
+                        priceUnit = priceUnitSelect.value;
+                    }
+                    
+                    const priceProductSelect = document.getElementById('price-product-2');
+                    if (priceProductSelect && priceProductSelect.value) {
+                        priceProduct = priceProductSelect.value;
+                    }
+                } catch (priceError) {
+                    console.log('Info: Pas de prix saisi');
+                    priceValue = null;
+                }
                 
                 const concentrateBrix = getBrixFromInput(concentrateValue, concentrateType);
                 const juiceBrix = getBrixFromInput(juiceValue, juiceType);
@@ -717,12 +938,17 @@
                     tonnes: convertFromQuintaux(quinteauxJus, 'tonnes', propsJus.masseVolumique)
                 };
                 
-                displayResults({
+                const dataForDisplay = {
                     results,
                     concentrationRate,
                     propsJus,
                     propsConcentre
-                }, false, inputData);
+                };
+                
+                // Calculer les prix si fournis
+                const pricing = priceValue ? calculatePricing(priceValue, priceUnit, priceProduct, false, dataForDisplay, inputData) : null;
+                
+                displayResults(dataForDisplay, false, inputData, pricing);
                 
             } catch(error) {
                 showError(error.message);
