@@ -539,16 +539,23 @@
         
         // === CALCULS DE PRIX ===
         function calculatePricing(priceValue, priceUnit, priceProduct, isJusToConcentre, data, inputData) {
-            if (!priceValue) return null;
+            console.log('Calcul pricing avec:', priceValue, priceUnit, priceProduct);
+            
+            if (!priceValue || priceValue <= 0) {
+                console.log('Pas de prix valide');
+                return null;
+            }
             
             // Déterminer les propriétés du produit de référence
             let refProps, refBrix;
             if ((isJusToConcentre && priceProduct === 'jus') || (!isJusToConcentre && priceProduct === 'jus')) {
                 refProps = data.propsJus;
                 refBrix = data.propsJus.brix;
+                console.log('Référence: JUS', refBrix, 'Brix, MV:', refProps.masseVolumique);
             } else {
                 refProps = data.propsConcentre;
                 refBrix = data.propsConcentre.brix;
+                console.log('Référence: CONCENTRÉ', refBrix, 'Brix, MV:', refProps.masseVolumique);
             }
             
             // Convertir le prix en €/hectolitre
@@ -556,12 +563,25 @@
             if (priceUnit === 'kl') pricePerHl = priceValue / 10;
             if (priceUnit === 'l') pricePerHl = priceValue * 100;
             
-            // Convertir en prix par tonne : Prix/hL ÷ masse volumique = Prix/tonne
-            const pricePerTonne = pricePerHl / refProps.masseVolumique;
+            console.log('Prix par hL:', pricePerHl);
             
-            // Calculer les prix pour jus et concentré selon le ratio Brix
-            const jusPricePerTonne = pricePerTonne * (data.propsJus.brix / refBrix);
-            const concentrePricePerTonne = pricePerTonne * (data.propsConcentre.brix / refBrix);
+            // Formule Excel corrigée : Le résultat doit être en €/quintal
+            // K306 = H306/A306 mais le résultat attendu est en €/quintal, pas €/tonne
+            const refPricePerQuintal = pricePerHl / refProps.masseVolumique;
+            const refPricePerTonne = refPricePerQuintal * 10;
+            
+            console.log('Prix référence par quintal:', refPricePerQuintal);
+            console.log('Prix référence par tonne:', refPricePerTonne);
+            
+            // Calculer les prix proportionnellement au Brix
+            const jusPricePerQuintal = refPricePerQuintal * (data.propsJus.brix / refBrix);
+            const concentrePricePerQuintal = refPricePerQuintal * (data.propsConcentre.brix / refBrix);
+            
+            const jusPricePerTonne = jusPricePerQuintal * 10;
+            const concentrePricePerTonne = concentrePricePerQuintal * 10;
+            
+            console.log('Prix jus/qtx:', jusPricePerQuintal, 'Prix jus/t:', jusPricePerTonne);
+            console.log('Prix concentré/qtx:', concentrePricePerQuintal, 'Prix concentré/t:', concentrePricePerTonne);
             
             // Calculer les coûts totaux
             const jusTotalCost = isJusToConcentre ? 
@@ -572,8 +592,11 @@
                 data.results.tonnes * concentrePricePerTonne : 
                 inputData.tonnes * concentrePricePerTonne;
             
+            console.log('Coût total jus:', jusTotalCost, 'Coût total concentré:', concentreTotalCost);
+            
             return {
-                pricePerTonne: pricePerTonne,
+                pricePerTonne: refPricePerTonne,
+                pricePerQuintal: refPricePerQuintal,
                 jusPricePerTonne: jusPricePerTonne,
                 concentrePricePerTonne: concentrePricePerTonne,
                 jusTotalCost: jusTotalCost,
@@ -812,8 +835,11 @@
                 
                 try {
                     const priceValueInput = document.getElementById('price-value-1');
-                    if (priceValueInput && priceValueInput.value && !isNaN(parseFloat(priceValueInput.value))) {
-                        priceValue = parseFloat(priceValueInput.value);
+                    if (priceValueInput && priceValueInput.value && priceValueInput.value.trim() !== '') {
+                        const parsedPrice = parseFloat(priceValueInput.value);
+                        if (!isNaN(parsedPrice) && parsedPrice > 0) {
+                            priceValue = parsedPrice;
+                        }
                     }
                     
                     const priceUnitSelect = document.getElementById('price-unit-1');
@@ -825,8 +851,10 @@
                     if (priceProductSelect && priceProductSelect.value) {
                         priceProduct = priceProductSelect.value;
                     }
+                    
+                    console.log('Prix récupéré:', priceValue, priceUnit, priceProduct);
                 } catch (priceError) {
-                    console.log('Info: Pas de prix saisi');
+                    console.log('Erreur récupération prix:', priceError);
                     priceValue = null;
                 }
                 
@@ -893,8 +921,11 @@
                 
                 try {
                     const priceValueInput = document.getElementById('price-value-2');
-                    if (priceValueInput && priceValueInput.value && !isNaN(parseFloat(priceValueInput.value))) {
-                        priceValue = parseFloat(priceValueInput.value);
+                    if (priceValueInput && priceValueInput.value && priceValueInput.value.trim() !== '') {
+                        const parsedPrice = parseFloat(priceValueInput.value);
+                        if (!isNaN(parsedPrice) && parsedPrice > 0) {
+                            priceValue = parsedPrice;
+                        }
                     }
                     
                     const priceUnitSelect = document.getElementById('price-unit-2');
@@ -906,8 +937,10 @@
                     if (priceProductSelect && priceProductSelect.value) {
                         priceProduct = priceProductSelect.value;
                     }
+                    
+                    console.log('Prix récupéré:', priceValue, priceUnit, priceProduct);
                 } catch (priceError) {
-                    console.log('Info: Pas de prix saisi');
+                    console.log('Erreur récupération prix:', priceError);
                     priceValue = null;
                 }
                 
